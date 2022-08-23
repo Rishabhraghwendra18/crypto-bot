@@ -51,15 +51,16 @@ async function fetchSwapQuote(sellToken,buyToken,sellAmount,slippagePercentage){
 }
 
 async function main() {
-    const firstSwap=  await fetchSwapQuote('ETH','DAI',etherToWei(1),0.02);
-    const secondSwap =  await fetchSwapQuote('DAI','ETH',etherToWei(Math.ceil(2000)),0.02);
+    const firstSwap=  await fetchSwapQuote('DAI','LINK',etherToWei(1),0.01);
+    const secondSwap =  await fetchSwapQuote('LINK','DAI',firstSwap.buyAmount,0.01);
     console.log("second: ",weiToEther(firstSwap.buyAmount),weiToEther(secondSwap.buyAmount))
     console.log('\n');
     if(parseFloat(secondSwap.buyAmount)-etherToWei(1) > 0){
         console.log("MADE PROFIT !!!",weiToEther(parseFloat(secondSwap.buyAmount)-etherToWei(1)));
+        // process.exit(1);
     }
     else{
-        console.log("MADE LOSS!!",Math.round(parseFloat(secondSwap.guarenteedPrice))-Math.round(parseFloat(firstSwap.guarenteedPrice)))
+        console.log("MADE LOSS!!",weiToEther(parseFloat(secondSwap.buyAmount)-etherToWei(1)))
     }
 
 }
