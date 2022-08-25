@@ -31,7 +31,7 @@ async function fetchSwapQuote(
     console.log("url:", url);
     // process.exit(1);
     const response = await axios.get(
-      `https://api.0x.org/swap/v1/quote?buyToken=${buyToken}&sellToken=${sellToken}&sellAmount=${sellAmount}&slippagePercentage=${slippagePercentage}`
+      `https://polygon.api.0x.org/swap/v1/quote?buyToken=${buyToken}&sellToken=${sellToken}&sellAmount=${sellAmount}&slippagePercentage=${slippagePercentage}`
     );
     const guarenteedPrice = response.data.guaranteedPrice;
     const value = response.data.value;

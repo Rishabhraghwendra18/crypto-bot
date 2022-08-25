@@ -10,7 +10,7 @@ import { IPool } from "@aave/core-v3/contracts/interfaces/IPool.sol";
 import { IFlashLoanSimpleReceiver } from "@aave/core-v3/contracts/flashloan/interfaces/IFlashLoanSimpleReceiver.sol";
 import { IERC20 } from "@aave/core-v3/contracts/dependencies/openzeppelin/contracts/IERC20.sol";
 import { SafeMath } from "@aave/core-v3/contracts/dependencies/openzeppelin/contracts/SafeMath.sol";
-
+import 'hardhat/console.sol';
 // interface IFaucet {
 //     function mint(
 //         address _token,
@@ -77,7 +77,7 @@ contract MySimpleFlashLoanV3 is FlashLoanSimpleReceiverBase {
         require(success, 'SWAP_CALL_FAILED');
         // Refund any unspent protocol fees to the sender.
         // msg.sender.transfer(address(this).balance);
-
+        console.log("is swap success: ",success);
         // // Use our current buyToken balance to determine how much we've bought.
         boughtAmount = buyToken.balanceOf(address(this)) - boughtAmount;
         // emit BoughtTokens(sellToken, buyToken, boughtAmount);
@@ -141,6 +141,8 @@ contract MySimpleFlashLoanV3 is FlashLoanSimpleReceiverBase {
         spender = allowanceTarget;
         swapTarget = _to;
         swapCallData = _data;
+        
+        console.log("swap call data: ");
 
         POOL.flashLoanSimple(
             receiverAddress,
