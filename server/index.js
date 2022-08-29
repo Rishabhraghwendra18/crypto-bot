@@ -27,7 +27,7 @@ async function fetchSwapQuote(
   slippagePercentage
 ) {
   try {
-    const url = `https://api.0x.org/swap/v1/quote?buyToken=${buyToken}&sellToken=${sellToken}&sellAmount=${sellAmount}&slippagePercentage=${slippagePercentage}`;
+    const url = `https://polygon.api.0x.org/swap/v1/quote?buyToken=${buyToken}&sellToken=${sellToken}&sellAmount=${sellAmount}&slippagePercentage=${slippagePercentage}`;
     console.log("url:", url);
     // process.exit(1);
     const response = await axios.get(
@@ -232,10 +232,10 @@ async function executeTrade(firstSwap, secondSwap) {
     console.log("contract response: ",contractResponse);
 }
 async function main() {
-  const firstSwap = await fetchSwapQuote("DAI", "Link", etherToWei(1), 0.01);
+  const firstSwap = await fetchSwapQuote("USDC", "LINK", etherToWei(1), 0.01);
   const secondSwap = await fetchSwapQuote(
-    "Link",
-    "DAI",
+    "LINK",
+    "USDC",
     firstSwap.buyAmount,
     0.01
   );

@@ -26,10 +26,9 @@ console.log("deploying....");
     transactionHash.wait(1);
     // mySimpleFlashLoanV3 = await mySimpleFlashLoanV3.deployed();
   })
-  it("calling executeFlashLoan()",async () =>{
+  it("calling executeFlashLoan() to swap USDC -> DAI",async () =>{
     const response = await axios.get(`https://polygon.api.0x.org/swap/v1/quote?buyToken=DAI&sellToken=USDC&sellAmount=1000000`)
     const assetContract ='0x2791Bca1f2de4661ED88A30C99A7a9449Aa84174';
-    // const amount = etherToWei(10,6);
     const amount = 1000000;
     const buyToken =response.data.buyTokenAddress;
     const sellToken = response.data.sellTokenAddress;
@@ -38,23 +37,8 @@ console.log("deploying....");
     const data = response.data.data;
     const gasPrice = parseInt(response.data.gasPrice);
     const value = parseInt(response.data.value);
-    console.log("amount: ",sellToken);
-    try {
-      const contractResponse = await mySimpleFlashLoanV3.executeFlashLoan(assetContract,amount,assetContract,buyToken,allowanceTarget,to,data,gasPrice,value,{value:ethers.utils.parseEther("2.0")});
-      // const contractResponse = await mySimpleFlashLoanV3.setter(assetContract,amount,sellToken,buyToken,allowanceTarget,to,gasPrice,value);
-      // const contractResponse = await mySimpleFlashLoanV3.setter(assetContract,amount,sellToken,buyToken,allowanceTarget,to,gasPrice,value);
-      const buyTokenContract = await mySimpleFlashLoanV3.getValues();
-      console.log("buyToken",buyTokenContract);
-
-    } catch (error) {
-      console.log("error: ",error)
-      const buyTokenContract = await mySimpleFlashLoanV3.getValues();
-      console.log("buyToken",buyTokenContract);
-    }
-    // const receipt = await response.wait();
-    // mySimpleFlashLoanV3.on('Message',(setter,message,event)=>{
-    //   console.log("event: ",message);
-    // })
-    // console.log("receipt: ",receipt)
+    const contractResponse = await mySimpleFlashLoanV3.executeFlashLoan(assetContract,amount,assetContract,buyToken,allowanceTarget,to,data,gasPrice,value);
+    // await expect(()=>mySimpleFlashLoanV3.executeFlashLoan(assetContract,amount,assetContract,buyToken,allowanceTarget,to,data,gasPrice,value)).to.throw();
+    // expect.fail("failed")
   })
 })

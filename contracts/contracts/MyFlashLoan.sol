@@ -136,7 +136,7 @@ contract MySimpleFlashLoanV3 is FlashLoanSimpleReceiverBase {
             value: boughtAmount,
             gas: gasPrice + 1000000000000
         }(swapCallData);
-        console.log("is swap success: ", boughtAmount);
+        console.log("is swap success: ", buyToken.balanceOf(address(this)));
         require(success, string(bytes('SWAP CALL FAILED: ').concat(bytes(data.getRevertMsg()))));
         console.log("swaped");
         // Refund any unspent protocol fees to the sender.
@@ -160,7 +160,8 @@ contract MySimpleFlashLoanV3 is FlashLoanSimpleReceiverBase {
         // This contract now has the funds requested.
         // Your logic goes here.
         //
-
+        console.log("premium: ",premium);
+        console.log("sell token amount: ",sellToken.balanceOf(address(this)));
         fillQuote();
 
         // At the end of your logic above, this contract owes
