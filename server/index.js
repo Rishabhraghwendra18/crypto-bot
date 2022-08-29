@@ -5,6 +5,7 @@ const app = express();
 const axios = require("axios");
 const Web3 = require("web3");
 const { etherToWei, weiToEther } = require("./utils");
+const {tokens,baseTokens} = require('./tokens');
 
 const PORT = 3000;
 app.listen(PORT, () => console.log(`Listening at ${PORT}`));
@@ -232,46 +233,38 @@ async function executeTrade(firstSwap, secondSwap) {
     console.log("contract response: ",contractResponse);
 }
 async function main() {
-  const firstSwap = await fetchSwapQuote("USDC", "LINK", etherToWei(1), 0.01);
-  const secondSwap = await fetchSwapQuote(
-    "LINK",
-    "USDC",
-    firstSwap.buyAmount,
-    0.01
-  );
-//   console.log(
-//     "second: ",
-//     weiToEther(firstSwap.buyAmount),
-//     weiToEther(secondSwap.buyAmount)
-//   );
-  console.log("\n");
-  if (parseFloat(secondSwap.buyAmount) - etherToWei(1) > 0) {
-    const profit = weiToEther(parseFloat(secondSwap.buyAmount) - etherToWei(1))
-    // console.log(
-    //   "MADE PROFIT !!!",
-    //   weiToEther(parseFloat(secondSwap.buyAmount) - etherToWei(1))
-    // );
-    
-    display({
-        "Sell Token":"DAI",
-        "Buy Token":"LINK",
-        "Sell Amount":weiToEther(secondSwap.buyAmount),
-        "Buy Amount":weiToEther(firstSwap.buyAmount),
-        "Profit":profit,
-    });
-    TOTAL_PROFIT+=parseFloat(profit);
-    console.log("1st swap fee: ",firstSwap.fee);
-    console.log("2nd swap fee: ",secondSwap.fee);
-    console.log("Total Profit: ",TOTAL_PROFIT)
-    // await executeTrade(firstSwap, secondSwap);
-    // process.exit(1);
-  } else {
-    console.log(
-      "MADE LOSS!!",
-      weiToEther(parseFloat(secondSwap.buyAmount) - etherToWei(1))
+  for(const token in tokens){
+    console.log("executing: ",token,tokens[token]);
+    const firstSwap = await fetchSwapQuote(baseTokens["USDC"], tokens[token], etherToWei(1,6), 0.01);
+    const secondSwap = await fetchSwapQuote(
+      tokens[token],
+      baseTokens["USDC"],
+      firstSwap.buyAmount,
+      0.01
     );
-    console.log("1st swap fee: ",firstSwap.fee);
-    console.log("2nd swap fee: ",secondSwap.fee);
+    console.log("\n");
+    if (parseFloat(secondSwap.buyAmount) - etherToWei(1,6) > 0) {
+      const profit = weiToEther(parseFloat(secondSwap.buyAmount) - etherToWei(1,6),6)-weiToEther(500,6);
+      
+      display({
+          "Sell Token":"USDC",
+          "Buy Token":token,
+          "Sell Amount":weiToEther(secondSwap.buyAmount,6),
+          "Buy Amount":weiToEther(firstSwap.buyAmount,6),
+          "Profit":profit,
+      });
+      TOTAL_PROFIT+=parseFloat(profit);
+      console.log("1st swap fee: ",firstSwap.fee);
+      console.log("2nd swap fee: ",secondSwap.fee);
+      console.log("Total Profit: ",TOTAL_PROFIT)
+    } else {
+      console.log(
+        `MADE LOSS!! with ${token}`,
+        weiToEther(parseFloat(secondSwap.buyAmount) - etherToWei(1,6),6)
+      );
+      console.log("1st swap fee: ",firstSwap.fee);
+      console.log("2nd swap fee: ",secondSwap.fee);
+    }
   }
 }
 setInterval(async () => {
