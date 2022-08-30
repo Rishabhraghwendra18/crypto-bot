@@ -245,20 +245,23 @@ async function main() {
     0.01
   );
   console.log("\n");
-  if (weiToEther(parseFloat(secondSwap.buyAmount) - etherToWei(1,6),6)-weiToEther(500,6) > 0) {
+  const flashLoanPremimumInEth = weiToEther(etherToWei(1,6)*0.0005,6);
+  console.log("flashLoanPremimumInEth: ",flashLoanPremimumInEth);
+  if (weiToEther(parseFloat(secondSwap.buyAmount) - etherToWei(1,6),6)-flashLoanPremimumInEth > 0) {
     isFoundArb=true;
-    const profit = weiToEther(parseFloat(secondSwap.buyAmount) - etherToWei(1,6),6)-weiToEther(500,6);
+    const profit = weiToEther(parseFloat(secondSwap.buyAmount) - etherToWei(1,6),6)-flashLoanPremimumInEth;
     display({
         "Sell Token":"USDC",
         "Buy Token":"LINK",
         "Sell Amount":weiToEther(secondSwap.buyAmount,6),
-        "Buy Amount":weiToEther(firstSwap.buyAmount,6),
+        "Buy Amount":weiToEther(firstSwap.buyAmount,18),
         "Profit":profit,
     });
     TOTAL_PROFIT+=parseFloat(profit);
     console.log("1st swap fee: ",firstSwap.fee);
     console.log("2nd swap fee: ",secondSwap.fee);
     console.log("Total Profit: ",TOTAL_PROFIT)
+    isFoundArb=false;
   } else {
     console.log(
       `MADE LOSS!! with ${tokens["LINK"]}`,
