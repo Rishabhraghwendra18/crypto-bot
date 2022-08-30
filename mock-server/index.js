@@ -8,7 +8,6 @@ app.use(cors({
 }));
 
 app.get('/swap/v1/quote',(req,res)=>{
-    console.log("hitting request")
     //random wrong values don't beleive on these
     let value=0;
     let allowanceTarget = "0x53E0bca35eC356BD5ddDFebbD1Fc0fD03FaBad39";
@@ -82,7 +81,7 @@ app.get('/swap/v1/quote',(req,res)=>{
         res.send({
             guaranteedPrice:19.88,
             price:19.88,
-            buyAmount:0.0502891626854413,  
+            buyAmount:5028916268544130,  
             buyTokenAddress:buyToken,
             sellTokenAddress:sellToken,
             value,
