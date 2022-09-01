@@ -7,12 +7,11 @@
 const hre = require("hardhat");
 
 async function main() {
-const aaveGoreliPoolAddressProvider = '0xc4dCB5126a3AfEd129BC3668Ea19285A9f56D15D';
-const aaveGoreliFaucet = '0x1ca525Cd5Cb77DB5Fa9cBbA02A0824e283469DBe';
+  const aaveMainnetPoolAddressProvider = '0xa97684ead0e402dC232d5A977953DF7ECBaB3CDb';
 
   console.log("Deploying------------")
   const SimpleFlashLoan = await hre.ethers.getContractFactory("MySimpleFlashLoanV3");
-  const simpleFlashLoan = await SimpleFlashLoan.deploy(aaveGoreliPoolAddressProvider,aaveGoreliFaucet);
+  const simpleFlashLoan = await SimpleFlashLoan.deploy(aaveMainnetPoolAddressProvider);
   // const simpleFlashLoan = await SimpleFlashLoan.deploy(aaveGoreliPoolAddressProvider);
 
   await simpleFlashLoan.deployed();

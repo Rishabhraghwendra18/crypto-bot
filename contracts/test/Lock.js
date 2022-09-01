@@ -9,6 +9,12 @@ const { isCallTrace } = require("hardhat/internal/hardhat-network/stack-traces/m
 const {etherToWei} = require('../utils');
 const axios = require("axios");
 
+// deploying steps
+//1. ERC20 mock
+//2. Pool
+//3. PoolAddressProvider
+//4. MySimpleFlashLoanV3
+
 describe("Testing MySwap Contract",()=>{
   let mySimpleFlashLoanV3Factory, mySimpleFlashLoanV3,deployer;
   beforeEach(async() =>{
@@ -23,7 +29,8 @@ console.log("deploying....");
       to: mySimpleFlashLoanV3.address,
       value: ethers.utils.parseEther("2.0"), // Sends exactly 1.0 ether
     });
-    transactionHash.wait(1);
+    await transactionHash.wait(1);
+    console.log("contract address: ",mySimpleFlashLoanV3.address);
     // mySimpleFlashLoanV3 = await mySimpleFlashLoanV3.deployed();
   })
   it("calling executeFlashLoan() to swap USDC -> DAI",async () =>{
@@ -37,8 +44,10 @@ console.log("deploying....");
     const data = response.data.data;
     const gasPrice = parseInt(response.data.gasPrice);
     const value = parseInt(response.data.value);
-    const contractResponse = await mySimpleFlashLoanV3.executeFlashLoan(assetContract,amount,assetContract,buyToken,allowanceTarget,to,data,gasPrice,value);
-    // await expect(()=>mySimpleFlashLoanV3.executeFlashLoan(assetContract,amount,assetContract,buyToken,allowanceTarget,to,data,gasPrice,value)).to.throw();
+    console.log("asset contract:",response.data.protocolFee)
+    // const contractResponse = await mySimpleFlashLoanV3.executeFlashLoan(assetContract,amount,assetContract,buyToken,allowanceTarget,to,data,gasPrice,value,{value:etherToWei(1,18)});
+    await expect(mySimpleFlashLoanV3.executeFlashLoan(assetContract,amount,assetContract,buyToken,allowanceTarget,to,data,gasPrice,value,{value:etherToWei(1,18)})).to.be.revertedWith("ERC20: transfer amount exceeds balance");
+    // await expect(async ()=>await mySimpleFlashLoanV3.executeFlashLoan(assetContract,amount,assetContract,buyToken,allowanceTarget,to,data,gasPrice,value)).to.throw();
     // expect.fail("failed")
   })
 })

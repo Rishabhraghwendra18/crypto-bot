@@ -2,8 +2,10 @@ require("@nomicfoundation/hardhat-toolbox");
 require("dotenv").config();
 /** @type import('hardhat/config').HardhatUserConfig */
 const MAINNET_FORK_RPC_URL = process.env.MAINNET_FORK_RPC_URL;
+const GOERLI_FORK_RPC_URL = process.env.GOERLI_FORK_RPC_URL;
 
 module.exports = {
+  defaultNetwork:"localhost",
   networks: {
     hardhat: {
       forking: {
@@ -11,7 +13,7 @@ module.exports = {
       },
     },
     goerli: {
-      url: `https://eth-goerli.g.alchemy.com/v2/${process.env.GOERLI_ALCHEMY_API_KEY}`,
+      url: GOERLI_FORK_RPC_URL,
       accounts: [process.env.METAMASK_PRIVATE_KEY],
     },
   },

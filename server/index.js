@@ -6,6 +6,7 @@ const axios = require("axios");
 const Web3 = require("web3");
 const { etherToWei, weiToEther } = require("./utils");
 const {tokens,baseTokens} = require('./tokens');
+const contractABi = require('./abi/MySimpleFlashLoanV3.json').abi;
 
 const PORT = 3000;
 app.listen(PORT, () => console.log(`Listening at ${PORT}`));
@@ -13,8 +14,8 @@ app.listen(PORT, () => console.log(`Listening at ${PORT}`));
 let TABLE_NUMBER = 0;
 let TOTAL_PROFIT=0;
 let isFoundArb = false;
-const web3 = new Web3(process.env.RPC_URL);
-web3.eth.accounts.wallet.add(process.env.PRIVATE_KEY);
+const web3 = new Web3(process.env.RPC_URL || 'http://127.0.0.1:8545/');
+web3.eth.accounts.wallet.add(process.env.PRIVATE_KEY || '0xac0974bec39a17e36ba4a6b4d238ff944bacb478cbed5efcae784d7bf4f2ff80');
 
 function display(tableValues) {
   const table = [tableValues];
@@ -39,7 +40,6 @@ async function fetchSwapQuote(
       url
     );
     const guarenteedPrice = response.data.guaranteedPrice;
-    const value = response.data.value;
     const price = response.data.price;
     const buyAmount = response.data.buyAmount;
     const buyTokenAddress = response.data.buyTokenAddress;
@@ -47,6 +47,9 @@ async function fetchSwapQuote(
     const allowanceTarget = response.data.allowanceTarget;
     const to = response.data.to;
     const data = response.data.data;
+    const gasPrice = parseInt(response.data.gasPrice);
+    const gas = parseInt(response.data.gas);
+    const value = parseInt(response.data.value);
     let fee = response.data.protocolFee;
 
     // console.log(`response: `,guarenteedPrice);
@@ -62,6 +65,8 @@ async function fetchSwapQuote(
       to,
       data,
       fee,
+      gasPrice,
+      gas
     };
     // display([buyToken,sellToken,sellAmount,value,price,guarenteedPrice]);
   } catch (error) {
@@ -70,162 +75,27 @@ async function fetchSwapQuote(
   }
 }
 
-async function executeTrade(firstSwap, secondSwap) {
-  const contractABi = [
-    {
-      inputs: [
-        {
-          internalType: "contract IPoolAddressesProvider",
-          name: "_addressProvider",
-          type: "address",
-        },
-        {
-          internalType: "contract IFaucet",
-          name: "_faucet",
-          type: "address",
-        },
-      ],
-      stateMutability: "nonpayable",
-      type: "constructor",
-    },
-    {
-      inputs: [],
-      name: "ADDRESSES_PROVIDER",
-      outputs: [
-        {
-          internalType: "contract IPoolAddressesProvider",
-          name: "",
-          type: "address",
-        },
-      ],
-      stateMutability: "view",
-      type: "function",
-    },
-    {
-      inputs: [],
-      name: "FAUCET",
-      outputs: [
-        {
-          internalType: "contract IFaucet",
-          name: "",
-          type: "address",
-        },
-      ],
-      stateMutability: "view",
-      type: "function",
-    },
-    {
-      inputs: [],
-      name: "POOL",
-      outputs: [
-        {
-          internalType: "contract IPool",
-          name: "",
-          type: "address",
-        },
-      ],
-      stateMutability: "view",
-      type: "function",
-    },
-    {
-      inputs: [
-        {
-          internalType: "address",
-          name: "asset",
-          type: "address",
-        },
-        {
-          internalType: "uint256",
-          name: "amount",
-          type: "uint256",
-        },
-        {
-          internalType: "contract IERC20",
-          name: "_sellToken",
-          type: "address",
-        },
-        {
-          internalType: "contract IERC20",
-          name: "_buyToken",
-          type: "address",
-        },
-        {
-          internalType: "address",
-          name: "allowanceTarget",
-          type: "address",
-        },
-        {
-          internalType: "address payable",
-          name: "_to",
-          type: "address",
-        },
-        {
-          internalType: "bytes",
-          name: "_data",
-          type: "bytes",
-        },
-      ],
-      name: "executeFlashLoan",
-      outputs: [],
-      stateMutability: "nonpayable",
-      type: "function",
-    },
-    {
-      inputs: [
-        {
-          internalType: "address",
-          name: "asset",
-          type: "address",
-        },
-        {
-          internalType: "uint256",
-          name: "amount",
-          type: "uint256",
-        },
-        {
-          internalType: "uint256",
-          name: "premium",
-          type: "uint256",
-        },
-        {
-          internalType: "address",
-          name: "initiator",
-          type: "address",
-        },
-        {
-          internalType: "bytes",
-          name: "params",
-          type: "bytes",
-        },
-      ],
-      name: "executeOperation",
-      outputs: [
-        {
-          internalType: "bool",
-          name: "",
-          type: "bool",
-        },
-      ],
-      stateMutability: "nonpayable",
-      type: "function",
-    },
-  ];
-  const contractAddress = "0x5CFFb70572C0C1442531CccD115f3507D39AB278";
-  const assetContractAddress = "0xA2025B15a1757311bfD68cb14eaeFCc237AF5b43";
+async function executeTrade(firstSwap, secondSwap,token) {
+  console.log("contract calling: ",token);
+  const contractAddress = "0xe063a388adac130661c6a13d0eb27fdddb97cc4a";
+  const assetContractAddress = "0x2791Bca1f2de4661ED88A30C99A7a9449Aa84174";
   const contract = new web3.eth.Contract(contractABi, contractAddress);
-
+try {
+  console.log("firstswap: ",firstSwap);
   const contractResponse = await contract.methods
     .executeFlashLoan(
       assetContractAddress,
-      etherToWei(1),
-      firstSwap.sellTokenAddress,
+      etherToWei(1,6),
+      assetContractAddress,
       firstSwap.buyTokenAddress,
       firstSwap.allowanceTarget,
       firstSwap.to,
-      firstSwap.data
+      firstSwap.data,
+      firstSwap.gasPrice,
+      firstSwap.value
     )
     .send(
-      { from: "0xA2bbE509D55a7F5623fB8e820c5BC0B93dC57750", gas: 25576 },
+      { from: "0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266",gas:5500000,value:etherToWei(1,18)},
       function (error, txnHash) {
         if (error) {
           console.log("error: ", error);
@@ -234,15 +104,19 @@ async function executeTrade(firstSwap, secondSwap) {
         }
       }
     );
-    console.log("contract response: ",contractResponse);
+    // console.log("contract response: ",contractResponse);
+  
+} catch (error) {
+  console.log(`error: ${token}`,error)
+}
+    console.log("contract call executed!! ",token)
 }
 async function main() {
   const flashLoanPremimumInEth = weiToEther(etherToWei(1,6)*0.0005,6);
-  for(const token in tokens){
-    console.log("tokens: ",token)
-    const firstSwap = await fetchSwapQuote(baseTokens["USDC"], tokens[token], etherToWei(1,6), 0.01);
+  console.log("tokens: ","LINK")
+    const firstSwap = await fetchSwapQuote(baseTokens["USDC"], tokens["LINK"], etherToWei(1,6), 0.01);
     const secondSwap = await fetchSwapQuote(
-      tokens[token],
+      tokens["LINK"],
       baseTokens["USDC"],
       firstSwap.buyAmount,
       0.01
@@ -251,9 +125,10 @@ async function main() {
     if (weiToEther(parseFloat(secondSwap.buyAmount) - etherToWei(1,6),6)-flashLoanPremimumInEth > 0) {
       isFoundArb=true;
       const profit = weiToEther(parseFloat(secondSwap.buyAmount) - etherToWei(1,6),6)-flashLoanPremimumInEth;
+      executeTrade(firstSwap,secondSwap,"LINK");
       display({
           "Sell Token":"USDC",
-          "Buy Token":token,
+          "Buy Token":"Link",
           "Sell Amount":weiToEther(secondSwap.buyAmount,6),
           "Buy Amount":weiToEther(firstSwap.buyAmount,18),
           "Profit":profit,
@@ -262,20 +137,23 @@ async function main() {
       console.log("1st swap fee: ",firstSwap.fee);
       console.log("2nd swap fee: ",secondSwap.fee);
       console.log("Total Profit: ",TOTAL_PROFIT)
-      isFoundArb=false;
+      // isFoundArb=false;
     } else {
+      executeTrade(firstSwap,secondSwap,"LINK");
       console.log(
-        `MADE LOSS!! with ${token}`,
+        `MADE LOSS!! with LINK`,
         weiToEther(parseFloat(secondSwap.buyAmount) - etherToWei(1,6),6)-weiToEther(500,6)
       );
       console.log("1st swap fee: ",weiToEther(firstSwap.buyAmount,18));
       console.log("2nd swap fee: ",weiToEther(secondSwap.buyAmount,6));
     }
-  }
+  // for(const token in tokens){
+    
+  // }
 }
-setInterval(async () => {
-  if(!isFoundArb){
-    await main();
-  }
-}, 3000);
-// main().catch((e) => console.log("error in main: ", e));
+// setInterval(async () => {
+//   if(!isFoundArb){
+//     await main();
+//   }
+// }, 3000);
+main().catch((e) => console.log("error in main: ", e));
