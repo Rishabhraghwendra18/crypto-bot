@@ -5,7 +5,8 @@
   "license": "MIT",
   "scripts": {
     "compile":"yarn hardhat compile && cp ./artifacts/contracts/MyFlashLoan.sol/MySimpleFlashLoanV3.json ../server/abi",
-    "deploy":"yarn compile && yarn hardhat run scripts/deploy.js"
+    "deploy":"yarn compile && yarn hardhat run scripts/deploy.js",
+    "test":"yarn hardhat test"
   },
   "devDependencies": {
     "@aave/core-v3": "^1.13.1",

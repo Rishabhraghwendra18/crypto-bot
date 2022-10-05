@@ -54,31 +54,34 @@ abstract contract FlashLoanSimpleReceiverBase is IFlashLoanSimpleReceiver {
 contract MySimpleFlashLoanV3 is FlashLoanSimpleReceiverBase {
     using SafeMath for uint256;
     using StringHelper for bytes;
-    IERC20 public sellToken_swap1;
-    IERC20 public buyToken_swap1;
-    address public spender_swap1;
-    address payable public swapTarget_swap1;
-    bytes public swapCallData_swap1;
+    struct Swap {
+        IERC20 sellToken;
+        IERC20 buyToken;
+        address spender;
+        address payable swapTarget;
+        bytes swapCallData;
+        uint gasPrice;
+        uint value;
+    }
+    Swap public swap1;
+    Swap public swap2;
     address payable public owner;
-    uint public gasPrice_swap1;
-    uint public value_swap1;
-
     // swap2
-    IERC20 public sellToken_swap2;
-    IERC20 public buyToken_swap2;
-    address public spender_swap2;
-    address payable public swapTarget_swap2;
-    bytes public swapCallData_swap2;
-    uint public gasPrice_swap2;
-    uint public value_swap2;
+    // IERC20 public sellToken_swap2;
+    // IERC20 public buyToken_swap2;
+    // address public spender_swap2;
+    // address payable public swapTarget_swap2;
+    // bytes public swapCallData_swap2;
+    // uint public gasPrice_swap2;
+    // uint public value_swap2;
 
     bool private locked;
     modifier reentrancyGuard() {
-     require(!locked);
-     locked = true;
-      _;
-      locked = false;
-  }
+        require(!locked, "Reentrancy Guard fired! Calling the contract again");
+        locked = true;
+        _;
+        locked = false;
+    }
 
     constructor(IPoolAddressesProvider _addressProvider)
         FlashLoanSimpleReceiverBase(_addressProvider)
@@ -94,24 +97,9 @@ contract MySimpleFlashLoanV3 is FlashLoanSimpleReceiverBase {
         console.log("fallback is called!!");
     }
 
-    function widthdrawAmount() internal {
+    function widthdrawAmount() public {
         require(owner == msg.sender, "Only for owner");
         owner.transfer(10);
-    }
-
-    function getValues()
-        public
-        view
-        returns (
-            address,
-            address,
-            address,
-            uint,
-            uint
-        )
-    {
-        console.log("value: ", address(this).balance);
-        return (spender_swap1, swapTarget_swap1, owner, gasPrice_swap1, value_swap1);
     }
 
     function fillQuote(
@@ -132,13 +120,20 @@ contract MySimpleFlashLoanV3 is FlashLoanSimpleReceiverBase {
         // Note that for some tokens (e.g., USDT, KNC), you must first reset any existing
         // allowance to 0 before being able to update it.
         require(sellToken.approve(spender, boughtAmount));
+        console.log("boughtAMount: ", boughtAmount);
         // Call the encoded swap function call on the contract at `swapTarget`,
         // passing along any ETH attached to this function call to cover protocol fees.
         (bool success, bytes memory data) = swapTarget.call{
             value: boughtAmount
         }(swapCallData);
         console.log("is swap success: ", boughtAmount);
-        require(success, string(bytes('SWAP CALL FAILED: ').concat(bytes(data.getRevertMsg()))));
+        console.log(string(bytes("SWAP call data: ").concat(swapCallData)));
+        require(
+            success,
+            string(
+                bytes("SWAP CALL FAILED: ").concat(bytes(data.getRevertMsg()))
+            )
+        );
         console.log("swaped");
         // Refund any unspent protocol fees to the sender.
         // (bool returnSuccess,) = payable(msg.sender).call{value:address(this).balance}("");
@@ -164,19 +159,34 @@ contract MySimpleFlashLoanV3 is FlashLoanSimpleReceiverBase {
         // This contract now has the funds requested.
         // Your logic goes here.
         //
-        console.log("premium: ",premium);
+        console.log("premium: ", premium);
+        console.log("bought token amount: ",IERC20(asset).balanceOf(address(this)));
         // console.log("sell token amount: ",sellToken.balanceOf(address(this)));
+        // console.log("1st swap buy: ", address(swap1.swapTarget));
         fillQuote(
-            sellToken_swap1,
-        buyToken_swap1,
-        spender_swap1,
-        swapTarget_swap1,
-        swapCallData_swap1,
-        gasPrice_swap1
+            swap1.sellToken,
+            swap1.buyToken,
+            swap1.spender,
+            swap1.swapTarget,
+            swap1.swapCallData,
+            swap1.gasPrice
         );
 
+        // swap2
+        console.log("calling swap2");
+        fillQuote(
+            swap2.sellToken,
+            swap2.buyToken,
+            swap2.spender,
+            swap2.swapTarget,
+            swap2.swapCallData,
+            swap2.gasPrice
+        );
         // after swap payback the loan
         uint amountOwed = amount.add(premium);
+        uint amountGot = IERC20(swap2.buyToken).balanceOf(address(this));
+        console.log("Amount Owed: ",amountOwed);
+        console.log("Amount Got: ",amountGot);
         IERC20(asset).approve(address(POOL), amountOwed);
         // widthdrawAmount();
         return true;
@@ -185,31 +195,31 @@ contract MySimpleFlashLoanV3 is FlashLoanSimpleReceiverBase {
     function executeFlashLoan(
         address asset,
         uint256 amount,
-        IERC20 _sellToken_swap1,
-        // The `buyTokenAddress` field from the API response.
-        IERC20 _buyToken_swap1,
-        // The `allowanceTarget_swap1` field from the API response.
-        address allowanceTarget_swap1,
-        // The `to` field from the API response.
-        address payable _to_swap1,
-        // The `data` field from the API response.
-        bytes calldata _data_swap1,
-        uint _gasPrice_swap1,
-        uint _value_swap1
-    ) public payable reentrancyGuard{
+        Swap memory _swap1,
+        Swap memory _swap2
+    ) public payable reentrancyGuard {
         address receiverAddress = address(this);
 
         bytes memory params = "";
         uint16 referralCode = 0;
 
-        sellToken_swap1 = _sellToken_swap1;
-        buyToken_swap1 = _buyToken_swap1;
-        spender_swap1
-         = allowanceTarget_swap1;
-        swapTarget_swap1 = _to_swap1;
-        swapCallData_swap1 = _data_swap1;
-        gasPrice_swap1 = _gasPrice_swap1;
-        value_swap1 = _value_swap1;
+        // sellToken_swap1 = _sellToken_swap1;
+        // buyToken_swap1 = _buyToken_swap1;
+        // spender_swap1 = allowanceTarget_swap1;
+        // swapTarget_swap1 = _to_swap1;
+        // swapCallData_swap1 = _data_swap1;
+        // gasPrice_swap1 = _gasPrice_swap1;
+        // value_swap1 = _value_swap1;
+        swap1 = _swap1;
+        swap2 = _swap2;
+        // swap 2
+        // sellToken_swap2 = _sellToken_swap2;
+        // buyToken_swap2 = _buyToken_swap2;
+        // spender_swap2 = allowanceTarget_swap2;
+        // swapTarget_swap2 = _to_swap2;
+        // swapCallData_swap2 = _data_swap2;
+        // gasPrice_swap2 = _gasPrice_swap2;
+        // value_swap2 = _value_swap2;
 
         POOL.flashLoanSimple(
             receiverAddress,
