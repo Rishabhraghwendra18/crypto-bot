@@ -24,50 +24,40 @@ function display(tableValues) {
   TABLE_NUMBER += 1;
 }
 async function fetchSwapQuote(
-  sellToken,
-  buyToken,
+  sellTokenAddress,
+  buyTokenAddress,
   sellAmount,
   slippagePercentage
 ) {
   try {
-    let url = `https://polygon.api.0x.org/swap/v1/quote?buyToken=${buyToken}&sellToken=${sellToken}&sellAmount=${sellAmount}&slippagePercentage=${slippagePercentage}`;
+    let url = `https://polygon.api.0x.org/swap/v1/quote?buyToken=${buyTokenAddress}&sellToken=${sellTokenAddress}&sellAmount=${sellAmount}&slippagePercentage=${slippagePercentage}`;
     if(process.env.DEV === "development"){
-      url=`http://localhost:3001/swap/v1/quote?buyToken=${buyToken}&sellToken=${sellToken}&sellAmount=${sellAmount}&slippagePercentage=${slippagePercentage}`;
+      url=`http://localhost:3001/swap/v1/quote?buyToken=${buyTokenAddress}&sellToken=${sellTokenAddress}&sellAmount=${sellAmount}&slippagePercentage=${slippagePercentage}`;
     }
-    console.log("url:", url);
+    // console.log("url:", url);
     // process.exit(1);
     const response = await axios.get(
       url
     );
-    const guarenteedPrice = response.data.guaranteedPrice;
-    const price = response.data.price;
-    const buyAmount = response.data.buyAmount;
-    const buyTokenAddress = response.data.buyTokenAddress;
-    const sellTokenAddress = response.data.sellTokenAddress;
-    const allowanceTarget = response.data.allowanceTarget;
-    const to = response.data.to;
-    const data = response.data.data;
-    const gasPrice = parseInt(response.data.gasPrice);
-    const gas = parseInt(response.data.gas);
-    const value = parseInt(response.data.value);
-    let fee = response.data.protocolFee;
-
-    // console.log(`response: `,guarenteedPrice);
-    return {
-      price,
-      guarenteedPrice,
-      value,
-      sellAmount,
-      buyAmount,
-      buyTokenAddress,
-      sellTokenAddress,
-      allowanceTarget,
-      to,
-      data,
-      fee,
-      gasPrice,
-      gas
-    };
+  const buyToken = response.data.buyTokenAddress;
+  const sellToken = response.data.sellTokenAddress;
+  const allowanceTarget = response.data.allowanceTarget;
+  const to = response.data.to;
+  const data = response.data.data;
+  const gasPrice = parseInt(response.data.gasPrice);
+  const value = parseInt(response.data.value);
+  const buyAmount = response.data.buyAmount;
+  let fee = response.data.protocolFee;
+  const swapObj = {
+    sellToken,
+    buyToken,
+    spender: allowanceTarget,
+    swapTarget: to,
+    swapCallData: data,
+    gasPrice,
+    value,
+  };
+  return [swapObj,buyAmount,fee];
     // display([buyToken,sellToken,sellAmount,value,price,guarenteedPrice]);
   } catch (error) {
     console.log("error: ", error);
@@ -77,22 +67,17 @@ async function fetchSwapQuote(
 
 async function executeTrade(firstSwap, secondSwap,token) {
   console.log("contract calling: ",token);
-  const contractAddress = "0xe063a388adac130661c6a13d0eb27fdddb97cc4a";
+  const contractAddress = "0x6fd91ca8653bbc35164e753e1fcd6794c0c43fde";
   const assetContractAddress = "0x2791Bca1f2de4661ED88A30C99A7a9449Aa84174";
   const contract = new web3.eth.Contract(contractABi, contractAddress);
 try {
-  console.log("firstswap: ",firstSwap);
+  // console.log("firstswap: ",firstSwap);
   const contractResponse = await contract.methods
     .executeFlashLoan(
       assetContractAddress,
       etherToWei(1,6),
-      assetContractAddress,
-      firstSwap.buyTokenAddress,
-      firstSwap.allowanceTarget,
-      firstSwap.to,
-      firstSwap.data,
-      firstSwap.gasPrice,
-      firstSwap.value
+     firstSwap,
+     secondSwap
     )
     .send(
       { from: "0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266",gas:5500000,value:etherToWei(1,18)},
@@ -111,49 +96,55 @@ try {
 }
     console.log("contract call executed!! ",token)
 }
-async function main() {
+async function logic() {
   const flashLoanPremimumInEth = weiToEther(etherToWei(1,6)*0.0005,6);
-  console.log("tokens: ","LINK")
+  console.log("tokens: ",flashLoanPremimumInEth)
     const firstSwap = await fetchSwapQuote(baseTokens["USDC"], tokens["LINK"], etherToWei(1,6), 0.01);
     const secondSwap = await fetchSwapQuote(
       tokens["LINK"],
       baseTokens["USDC"],
-      firstSwap.buyAmount,
+      firstSwap[1],
       0.01
     );
     console.log("\n");
-    if (weiToEther(parseFloat(secondSwap.buyAmount) - etherToWei(1,6),6)-flashLoanPremimumInEth > 0) {
+    console.log("secondSwap: ",etherToWei(1,6));
+    if (weiToEther(parseFloat(secondSwap[1]) - etherToWei(1,6),6)-flashLoanPremimumInEth > 0) {
       isFoundArb=true;
-      const profit = weiToEther(parseFloat(secondSwap.buyAmount) - etherToWei(1,6),6)-flashLoanPremimumInEth;
-      executeTrade(firstSwap,secondSwap,"LINK");
+      const profit = weiToEther(parseFloat(secondSwap[1]) - etherToWei(1,6),6)-flashLoanPremimumInEth;
+      await executeTrade(firstSwap[0],secondSwap[0],"LINK");
       display({
           "Sell Token":"USDC",
           "Buy Token":"Link",
-          "Sell Amount":weiToEther(secondSwap.buyAmount,6),
-          "Buy Amount":weiToEther(firstSwap.buyAmount,18),
+          "Sell Amount":weiToEther(secondSwap[1],6),  //USDC value
+          "Buy Amount":weiToEther(firstSwap[1],18),
           "Profit":profit,
       });
       TOTAL_PROFIT+=parseFloat(profit);
-      console.log("1st swap fee: ",firstSwap.fee);
-      console.log("2nd swap fee: ",secondSwap.fee);
+      console.log("1st swap LINK bought: ",firstSwap[1]);
+      // console.log("2nd swap fee: ",secondSwap[2]);
       console.log("Total Profit: ",TOTAL_PROFIT)
       // isFoundArb=false;
+      return 1;
     } else {
-      executeTrade(firstSwap,secondSwap,"LINK");
+      // executeTrade(firstSwap,secondSwap,"LINK");
       console.log(
         `MADE LOSS!! with LINK`,
-        weiToEther(parseFloat(secondSwap.buyAmount) - etherToWei(1,6),6)-weiToEther(500,6)
+        weiToEther(parseFloat(secondSwap[1]) - etherToWei(1,6),6)-weiToEther(500,6)
       );
-      console.log("1st swap fee: ",weiToEther(firstSwap.buyAmount,18));
-      console.log("2nd swap fee: ",weiToEther(secondSwap.buyAmount,6));
+      console.log("1st swap fee: ",weiToEther(firstSwap[1],18));
+      console.log("2nd swap fee: ",weiToEther(secondSwap[1],6));
     }
-  // for(const token in tokens){
-    
-  // }
 }
-// setInterval(async () => {
-//   if(!isFoundArb){
-//     await main();
-//   }
-// }, 3000);
-main().catch((e) => console.log("error in main: ", e));
+async function main() {
+  let profit =0;
+ while (true) {
+  profit=await logic();
+   if(profit){
+    console.log("calling profit: ");
+    break;
+   }
+ }
+}
+
+main()
+.catch((e) => console.log("error in main: ", e));
